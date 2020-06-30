@@ -1,0 +1,4 @@
+.env
+*.json
+*.jpg
+__pycache__
