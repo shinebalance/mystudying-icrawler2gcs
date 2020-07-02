@@ -15,7 +15,7 @@ from logging import getLogger, StreamHandler, DEBUG
 def main():
     '''main process
     '''
-    # for time logging start
+    # time logging start
     datetime_start = datetime.datetime.now()
     datetime_start_formated = format(datetime_start, '%Y/%m/%d %H:%M:%S')
     logger.debug(f'START AT : {datetime_start_formated}')
@@ -24,15 +24,16 @@ def main():
     try:
         # load .env
         load_dotenv()
-        # make dir
+        # make save dir
         if not os.path.isdir(WORKING_DIRECTORY):
             os.makedirs(WORKING_DIRECTORY)
         # crawling from Bing
-        BingCrawl(SEARCH_WORD, WORKING_DIRECTORY, SEARCH_QT)
+        # BingCrawl(SEARCH_WORD, WORKING_DIRECTORY, SEARCH_QT)
+        BingCrawl_multi_thread(SEARCH_WORD, WORKING_DIRECTORY, SEARCH_QT)
         # resize and get list
         dir_save_resizedimg, list_resizedimg = resize_image(WORKING_DIRECTORY)
         # upload gcs
-        upload_gcs(dir_save_resizedimg, list_resizedimg)
+        # upload_gcs(dir_save_resizedimg, list_resizedimg)
     except Executionerror:
         logger.debug('running failed in main process')
     
@@ -42,17 +43,54 @@ def main():
     logger.debug(f'END AT   : {datetime_end_formated}')
     logger.debug(f'TOTAL    : {total_time}')
 
+
 def BingCrawl(SEARCH_WORD:str, WORKING_DIRECTORY: str, SEARCH_QT: int):
     '''Bing画像検索で画像を取得する
     '''
-    # SEARCH_QT = 3
-    # # make dir
-    # if not os.path.isdir(IMG_PATH):
-    #     os.makedirs(IMG_PATH)
-    # crawl and save to dir
     crawler = BingImageCrawler(storage = {"root_dir": WORKING_DIRECTORY})
     crawler.crawl(keyword = SEARCH_WORD, max_num = SEARCH_QT)
 
+
+def BingCrawl_multi_thread(SEARCH_WORD:str, WORKING_DIRECTORY: str, SEARCH_QT: int):
+    '''Bing画像検索で画像を取得する(マルチスレッド)
+    '''
+    # multiple threads
+    crawler = BingImageCrawler(
+        feeder_threads=4,
+        parser_threads=4,
+        downloader_threads=4,
+        storage = {"root_dir": WORKING_DIRECTORY})
+    # crawl
+    crawler.crawl(
+        keyword = SEARCH_WORD, 
+        max_num = SEARCH_QT, 
+        filters={'license': 'creativecommons'},
+        file_idx_offset=0)
+    crawler.crawl(
+        keyword = SEARCH_WORD, 
+        max_num = SEARCH_QT,  
+        filters={'license': 'publicdomain'},
+        file_idx_offset='auto')
+    crawler.crawl(
+        keyword = SEARCH_WORD, 
+        max_num = SEARCH_QT,  
+        filters={'license': 'noncommercial'},
+        file_idx_offset='auto')
+    crawler.crawl(
+        keyword = SEARCH_WORD, 
+        max_num = SEARCH_QT,  
+        filters={'license': 'commercial'},
+        file_idx_offset='auto')
+    crawler.crawl(
+        keyword = SEARCH_WORD, 
+        max_num = SEARCH_QT,  
+        filters={'license': 'noncommercial,modify'},
+        file_idx_offset='auto')
+    crawler.crawl(
+        keyword = SEARCH_WORD, 
+        max_num = SEARCH_QT,  
+        filters={'license': 'commercial,modify'},
+        file_idx_offset='auto')
 
 def resize_image(WORKING_DIRECTORY :str):
     '''取得した画像を指定サイズでリサイズ
@@ -85,14 +123,14 @@ def resize_image(WORKING_DIRECTORY :str):
 def upload_gcs(dir_save_resizedimg:str, list_resizedimg: list):
     '''Google cloud storageへのアップロードをおこなう
     '''
-    # set path from .env
+    # get path from .env
     GCP_TOKEN = os.environ["GOOGLE_APPLICATION_CREDENTIALS"]
     BUCKET_NAME = os.environ["BUCKET_NAME"]
-    # connect to bucket
+    # connect to GCS bucket
     client = storage.Client()
     bucket = client.get_bucket(BUCKET_NAME)
 
-    # upload
+    # upload to GCS
     for resizedimg in list_resizedimg:
         getpath=f'{dir_save_resizedimg}/{resizedimg}'
         uppath = f'{sys.argv[1]}/{resizedimg}'
