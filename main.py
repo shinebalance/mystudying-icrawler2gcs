@@ -44,11 +44,11 @@ def main():
     logger.debug(f'TOTAL    : {total_time}')
 
 
-def BingCrawl(SEARCH_WORD:str, WORKING_DIRECTORY: str, SEARCH_QT: int):
+def BingCrawl(SEARCH_WORD: str, WORKING_DIRECTORY: str, SEARCH_QT: int):
     '''Bing画像検索で画像を取得する
     '''
-    crawler = BingImageCrawler(storage = {"root_dir": WORKING_DIRECTORY})
-    crawler.crawl(keyword = SEARCH_WORD, max_num = SEARCH_QT)
+    crawler = BingImageCrawler(storage={"root_dir": WORKING_DIRECTORY})
+    crawler.crawl(keyword=SEARCH_WORD, max_num=SEARCH_QT)
 
 
 def BingCrawl_multi_thread(SEARCH_WORD:str, WORKING_DIRECTORY: str, SEARCH_QT: int):
@@ -162,4 +162,3 @@ if __name__ == '__main__':
 
     # run main
     main()
-
